@@ -120,6 +120,10 @@ Use data of `ames_raw` up to 2008 predict the housing price for the later years.
 # Do feature engineering if needed.
 ames_raw_2008=ames_raw[ames_raw$`Yr Sold`<2008,]
 ames_raw_2009=ames_raw[ames_raw$`Yr Sold`>=2008,]
+
+missing_values_per_column <- sapply(ames_raw_2008, function(x) sum(is.na(x)))
+
+print(missing_values_per_column)
 ```
 
 Use the same loss function calculator.
@@ -137,9 +141,10 @@ calc_loss<-function(prediction,actual){
 Apply CART and try to interpret the result that you get.  Be sure to fit the models on a training set and evaluate their performance on a test set.  Does it have a good prediction accuracy?
 
 ```{r}
-cart_model <- rpart(SalePrice ~ ., data = ames_raw_2008, method = "anova")
-predictions <- predict(cart_model, newdata = ames_raw_2009)
-actual_prices <- ames_raw_2009$SalePrice
+set.seed(123) # for reproducibility
+train_control <- trainControl(method = "cv", number = 10)
+cart_model <- train(SalePrice ~ 'Condition 1' + 'House Style', data = ames_raw_2008, method = "rpart", 
+                    trControl = train_control)
 ```
 
 Comment of the result:
