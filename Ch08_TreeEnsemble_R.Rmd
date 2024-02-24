@@ -137,8 +137,9 @@ calc_loss<-function(prediction,actual){
 Apply CART and try to interpret the result that you get.  Be sure to fit the models on a training set and evaluate their performance on a test set.  Does it have a good prediction accuracy?
 
 ```{r}
-#
-#
+cart_model <- rpart(SalePrice ~ ., data = ames_raw_2008, method = "anova")
+predictions <- predict(cart_model, newdata = ames_raw_2009)
+actual_prices <- ames_raw_2009$SalePrice
 ```
 
 Comment of the result:
@@ -185,27 +186,78 @@ data(Carseats,package = "ISLR2")
 ```
 (a) Split the data set into a training set and a test set.
 ```{r}
+library(ISLR2)
+data(Carseats)
 
+set.seed(123)
+
+data_size <- nrow(Carseats)
+train_size <- floor(0.75 * data_size)
+train_indices <- sample(seq_len(data_size), size = train_size)
+
+training_set <- Carseats[train_indices, ]
+test_set <- Carseats[-train_indices, ]
 ```
 
 (b) Fit a regression tree to the training set. Plot the tree, and interpret the results. What test MSE do you obtain?
 ```{r}
+library(tree)
 
+tree_model <- tree(Sales ~ ., data = training_set)
+
+plot(tree_model)
+text(tree_model, pretty = 0)
+
+test_predictions <- predict(tree_model, test_set)
+
+test_mse <- mean((test_set$Sales - test_predictions)^2)
+test_mse
 ```
 
 (c) Use cross-validation in order to determine the optimal level of tree complexity. Does pruning the tree improve the test MSE?
 ```{r}
+tree_model <- tree(Sales ~ ., data = training_set)
+cv_tree <- cv.tree(tree_model, FUN = prune.tree)
 
+plot(cv_tree$size, cv_tree$dev, type = 'b', xlab = "Number of Terminal Nodes", ylab = "CV Deviance")
+optimal_size <- which.min(cv_tree$dev)
+
+pruned_tree <- prune.tree(tree_model, best = optimal_size)
+plot(pruned_tree)
+text(pruned_tree, pretty = 0)
+
+pruned_test_predictions <- predict(pruned_tree, test_set)
+
+pruned_test_mse <- mean((test_set$Sales - pruned_test_predictions)^2)
+pruned_test_mse
 ```
 
 (d) Use the bagging approach in order to analyze this data. What test MSE do you obtain? Use the importance() function to determine which variables are most important.
 ```{r}
+library(randomForest)
 
+bagging_model <- randomForest(Sales ~ ., data = training_set, mtry = ncol(training_set)-1, importance = TRUE)
+bagging_predictions <- predict(bagging_model, test_set)
+
+bagging_test_mse <- mean((test_set$Sales - bagging_predictions)^2)
+bagging_test_mse
+
+variable_importance <- importance(bagging_model)
+variable_importance
 ```
 
 (e) Use random forests to analyze this data. What test MSE do you obtain? Use the importance() function to determine which variables are most important. Describe the effect of m, the number of variables considered at each split, on the error rate obtained.
 ```{r}
+rf_model <- randomForest(Sales ~ ., data = training_set, importance = TRUE)
+rf_predictions <- predict(rf_model, test_set)
 
+rf_test_mse <- mean((test_set$Sales - rf_predictions)^2)
+rf_test_mse
+
+variable_importance <- importance(rf_model)
+variable_importance
+
+varImpPlot(rf_model)
 ```
 (f) Now analyze the data using BART, and report your results.
 ```{r}
@@ -224,8 +276,15 @@ data(OJ,package = "ISLR2")
 
 Your code:
 ```{r,echo=TRUE}
-#
-#
+library(ISLR2)
+
+data(OJ)
+
+set.seed(123)
+
+training_indices <- sample(nrow(OJ), 800)
+training_set <- OJ[training_indices, ]
+test_set <- OJ[-training_indices, ]
 ```
 
 Your answer:
@@ -240,8 +299,10 @@ Please write your answer in full sentences.
 
 Your code:
 ```{r,echo=TRUE}
-#
-#
+library(tree)
+tree.OJ = tree(Purchase~.,data=training_set)
+
+summary(tree.OJ)
 ```
 
 Your answer:
@@ -256,8 +317,7 @@ Please write your answer in full sentences.
 
 Your code:
 ```{r,echo=TRUE}
-#
-#
+tree.OJ
 ```
 
 Your answer:
@@ -277,8 +337,9 @@ Please write your answer in full sentences.
 
 Your code:
 ```{r,echo=TRUE}
-#
-#
+plot(tree.OJ)
+
+text(tree.OJ, pretty = 0)
 ```
 
 Your answer:
@@ -293,8 +354,9 @@ Please write your answer in full sentences.
 
 Your code:
 ```{r,echo=TRUE}
-#
-#
+cv_tree <- cv.tree(tree.OJ, FUN = prune.tree)
+
+print(cv_tree)
 ```
 
 Your answer:
@@ -309,8 +371,7 @@ Please write your answer in full sentences.
 
 Your code:
 ```{r,echo=TRUE}
-#
-#
+plot(cv_tree$size, cv_tree$dev, type = "b")
 ```
 
 Your answer:
@@ -341,8 +402,16 @@ Please write your answer in full sentences.
 
 Your code:
 ```{r,echo=TRUE}
-#
-#
+optimal_size <- cv_tree$size[which.min(cv_tree$dev)]
+
+if (optimal_size == max(cv_tree$size)) {
+  pruned_tree <- prune.tree(tree.OJ, best = 5)
+} else {
+  pruned_tree <- prune.tree(tree.OJ, best = optimal_size)
+}
+
+plot(pruned_tree)
+text(pruned_tree, pretty = 0)
 ```
 
 Your answer:
@@ -357,8 +426,15 @@ Please write your answer in full sentences.
 
 Your code:
 ```{r,echo=TRUE}
-#
-#
+unpruned_pred <- predict(tree.OJ, newdata = training_set, type = "class")
+
+pruned_pred <- predict(pruned_tree, newdata = training_set, type = "class")
+
+unpruned_error <- mean(unpruned_pred != training_set$Purchase)
+pruned_error <- mean(pruned_pred != training_set$Purchase)
+
+unpruned_error
+pruned_error
 ```
 
 Your answer:
@@ -374,8 +450,15 @@ Please write your answer in full sentences.
 
 Your code:
 ```{r,echo=TRUE}
-#
-#
+unpruned_test_pred <- predict(tree.OJ, newdata = test_set, type = "class")
+
+pruned_test_pred <- predict(pruned_tree, newdata = test_set, type = "class")
+
+unpruned_test_error <- mean(unpruned_test_pred != test_set$Purchase)
+pruned_test_error <- mean(pruned_test_pred != test_set$Purchase)
+
+unpruned_test_error
+pruned_test_error
 ```
 
 Your answer:
